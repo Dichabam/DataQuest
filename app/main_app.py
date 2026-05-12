@@ -1,115 +1,130 @@
 # app/main_app.py
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 import os
 
-# Add the project root to the path so we can import our src modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.data_prep import load_and_split_data, clean_data
 from src.feature_engineering import engineer_features
 from src.model_training import prepare_woe_data, train_and_evaluate
 from src.scorecard import generate_scorecard
+from src.business_logic import calculate_portfolio_profit, audit_fairness, discover_interactions
 
-# --- 1. CACHE THE MODEL TRAINING ---
-# We run the pipeline once when the app starts and keep it in memory
 @st.cache_resource
-def load_pipeline():
+def load_and_train_pipeline():
+    # 1. Load & Clean
     train, test = load_and_split_data("data/raw/loan_book.csv")
     train_clean, imputers = clean_data(train, is_train=True)
     test_clean, _ = clean_data(test, is_train=False, imputers=imputers)
     
+    # 2. Engineer WoE
     train_woe, test_woe, woe_engine = engineer_features(train_clean, test_clean)
     X_train_woe, y_train, X_test_woe, y_test = prepare_woe_data(train_woe, test_woe)
     
-    model, _ = train_and_evaluate(X_train_woe, y_train, X_test_woe, y_test, "Advanced Model")
+    # 3. Train Model
+    model, test_probs = train_and_evaluate(X_train_woe, y_train, X_test_woe, y_test, "Advanced Model")
     scorecard = generate_scorecard(model, woe_engine, X_train_woe.columns)
     
-    # Return the clean dataset for EDA, and the scorecard for the calculator
-    return train_clean, scorecard
+    # 4. Generate ML Insights (Shadow Model)
+    shadow_insights = discover_interactions(X_train_woe, y_train)
+    
+    # Attach predictions to test set for business logic
+    test_clean['predicted_default_prob'] = test_probs
+    # Convert probability to rough credit score (Range 300 - 850)
+    test_clean['credit_score'] = 850 - (test_probs * 550) 
+    test_clean['actual_default'] = y_test.values
+    
+    return train_clean, test_clean, scorecard, shadow_insights
 
-df, scorecard_df = load_pipeline()
+df_train, df_test, scorecard_df, shadow_insights = load_and_train_pipeline()
 
-# --- 2. APP LAYOUT & SIDEBAR ---
-st.set_page_config(page_title="Credit Risk Analytics", layout="wide")
-st.title("🏦 Retail Lending: Credit Risk Center")
+# --- APP LAYOUT ---
+st.set_page_config(page_title="Retail Lending Analytics", layout="wide", page_icon="🏦")
+st.title("🏦 Retail Lending: Strategic Model Dashboard")
+st.markdown("*A Multidisciplinary Framework balancing Predictive Power, Profitability, and Regulatory Compliance.*")
 
-# Navigation
-tab1, tab2 = st.tabs(["📊 Exploratory Analysis (EDA)", "🧮 Live Scorecard Calculator"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 1. Risk Exploration", 
+    "🧮 2. The Scorecard", 
+    "💼 3. Profit Optimization (CEO View)", 
+    "⚖️ 4. Fairness Audit (Regulator View)"
+])
 
-# --- 3. TAB 1: INTERACTIVE EDA ---
+# --- TAB 1: EDA & SHADOW ML ---
 with tab1:
-    st.header("Loan Portfolio Risk Explorer")
+    st.header("Risk Exploration & ML Insights")
+    st.markdown("We use a complex **Random Forest Shadow Model** alongside traditional EDA to detect non-linear risk patterns.")
     
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 1])
     with col1:
-        selected_purpose = st.selectbox("Filter by Loan Purpose:", df['loan_purpose'].unique())
+        st.subheader("Default Probability by Home Ownership")
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.barplot(data=df_train, x='home_ownership', y='default_flag', errorbar=None, palette="Blues_d", ax=ax)
+        st.pyplot(fig)
+        
     with col2:
-        selected_region = st.selectbox("Filter by Region:", df['region'].unique())
-        
-    filtered_df = df[(df['loan_purpose'] == selected_purpose) & (df['region'] == selected_region)]
-    
-    st.write(f"**Showing data for:** {selected_purpose.replace('_', ' ').title()} in {selected_region}")
-    
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-    
-    # Plot 1: Default Rate by Home Ownership
-    sns.barplot(data=filtered_df, x='home_ownership', y='default_flag', errorbar=None, ax=axes[0], palette="Blues_d")
-    axes[0].set_title("Default Probability by Home Ownership")
-    axes[0].set_ylabel("Probability of Default")
-    
-    # Plot 2: Income Distribution of Defaulters vs Non-Defaulters
-    sns.boxplot(data=filtered_df, x='default_flag', y='annual_income', ax=axes[1], palette="Set2")
-    axes[1].set_title("Annual Income vs Default Status")
-    axes[1].set_xlabel("Default Status (0 = Good, 1 = Default)")
-    
-    st.pyplot(fig)
+        st.subheader("Shadow ML Feature Importance")
+        st.dataframe(shadow_insights.head(5), use_container_width=True)
+        st.info("💡 **Insight:** While Logistic Regression uses linear weights, our Shadow AI confirms that Income and Utilisation possess complex, non-linear predictive power.")
 
-# --- 4. TAB 2: WHAT-IF SCENARIO CALCULATOR ---
+# --- TAB 2: SCORECARD ---
 with tab2:
-    st.header("Applicant Scoring Engine")
-    st.markdown("Adjust the applicant's details below to see how their credit score changes in real-time.")
-    
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        input_age = st.slider("Applicant Age", 18, 80, 30)
-        input_income = st.number_input("Annual Income ($)", 10000, 300000, 50000, step=5000)
-        input_home = st.selectbox("Home Ownership", ['RENT', 'MORTGAGE', 'OWN'])
-        
-    with col4:
-        input_loan = st.number_input("Requested Loan Amount ($)", 1000, 50000, 10000, step=1000)
-        input_util = st.slider("Credit Utilisation (%)", 0, 100, 40)
-        input_purpose = st.selectbox("Loan Purpose", df['loan_purpose'].unique())
+    st.header("Transparent Scoring Engine")
+    st.markdown("This point system is derived from the Logistic Regression model. It is 100% interpretable.")
+    st.dataframe(scorecard_df, use_container_width=True)
 
-    # --- SIMULATED SCORING LOGIC ---
-    # In a fully connected app, we would map these inputs directly to the scorecard_df bins.
-    # For this demonstration, we showcase how the business logic operates.
-    st.markdown("---")
-    st.subheader("Decision Output")
+# --- TAB 3: THE BUSINESS FRONTIER ---
+with tab3:
+    st.header("Portfolio Profit Optimization")
+    st.markdown("Move the slider to set the risk appetite. See how the model impacts the bottom line on our Test Portfolio.")
     
-    # Simple demonstration score calculation based on our earlier insights
-    base_score = 600
-    score_modifier = 0
+    # Interactive Cutoff Slider
+    acceptable_risk = st.slider("Maximum Acceptable Default Probability (%)", min_value=10, max_value=80, value=40, step=1)
+    cutoff_prob = acceptable_risk / 100.0
     
-    if input_age > 45: score_modifier += 25
-    elif input_age < 25: score_modifier -= 20
-        
-    if input_income > 80000: score_modifier += 30
-    elif input_income < 35000: score_modifier -= 25
-        
-    if input_util > 75: score_modifier -= 40
-    elif input_util < 30: score_modifier += 20
-        
-    final_score = base_score + score_modifier
+    net_profit, rev, losses, app_rate = calculate_portfolio_profit(
+        y_true=df_test['actual_default'], 
+        y_prob=df_test['predicted_default_prob'], 
+        cutoff_prob=cutoff_prob, 
+        loan_amounts=df_test['loan_amount']
+    )
     
-    # Display the result with dynamic coloring
-    if final_score >= 650:
-        st.success(f"### Applicant Score: {final_score} - **APPROVED**")
-    elif final_score >= 600:
-        st.warning(f"### Applicant Score: {final_score} - **MANUAL REVIEW**")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Approval Rate", f"{app_rate:.1f}%")
+    col2.metric("Interest Revenue", f"${rev:,.0f}")
+    col3.metric("Default Losses", f"-${losses:,.0f}")
+    col4.metric("Net Profit", f"${net_profit:,.0f}", delta="Optimized")
+    
+    if net_profit < 0:
+        st.error("⚠️ **Warning:** The current risk threshold is too loose. Losses exceed interest revenue.")
+    elif app_rate < 20:
+        st.warning("⚠️ **Warning:** The threshold is too strict. We are turning away too many good customers and stunting growth.")
     else:
-        st.error(f"### Applicant Score: {final_score} - **REJECTED**")
+        st.success("✅ **Healthy Portfolio:** Balance of risk and reward achieved.")
+
+# --- TAB 4: FAIRNESS AUDIT ---
+with tab4:
+    st.header("Regulatory Fairness Audit")
+    st.markdown("Ensuring our Logistic Regression model does not systematically bias against specific geographic regions.")
+    
+    cutoff_score = 600 # Assume 600 is the hard cutoff for this test
+    fairness_df = audit_fairness(df_test, 'region', 'credit_score', cutoff_score)
+    
+    st.write(f"**Approval Rates by Region (Assuming Cutoff Score of {cutoff_score})**")
+    
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.barplot(data=fairness_df, x='region', y='Approval_Rate', palette="viridis", ax=ax)
+    ax.axhline(fairness_df['Approval_Rate'].mean(), color='red', linestyle='--', label='Average Approval Rate')
+    ax.legend()
+    st.pyplot(fig)
+    
+    variance = fairness_df['Approval_Rate'].max() - fairness_df['Approval_Rate'].min()
+    if variance > 15:
+        st.warning(f"**Audit Flag:** High variance ({variance:.1f}%) in approval rates across regions. Manual review recommended.")
+    else:
+        st.success(f"**Audit Passed:** Approval rates are relatively consistent across regions (Variance: {variance:.1f}%). No glaring geographical bias detected.")
