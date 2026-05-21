@@ -1,4 +1,7 @@
+# app/main_app.py
 import streamlit as st
+
+# Must be the first Streamlit command
 st.set_page_config(page_title="Strategic Model Dashboard", layout="wide", page_icon="🏦")
 
 import pandas as pd
@@ -8,6 +11,7 @@ import seaborn as sns
 import os, sys
 from sklearn.metrics import roc_curve, auc, precision_score, recall_score
 
+# Force white background so charts are visible in Streamlit Dark Mode
 sns.set_theme(style="whitegrid", rc={"figure.facecolor": "white", "axes.facecolor": "white"})
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -17,7 +21,7 @@ from src.model_training import prepare_baseline_data, prepare_woe_data, train_an
 from src.scorecard import generate_scorecard
 from src.business_logic import calculate_portfolio_profit, audit_fairness, discover_interactions, calculate_psi
 
-@st.cache_resource(show_spinner="Training ML Models (CV Tuning active)...")
+@st.cache_resource(show_spinner="Training ML Models (CV Tuning active)... This may take a minute.")
 def load_and_train_pipeline():
     train, test = load_and_split_data("data/raw/loan_book.csv")
     train_raw = train.copy() 
@@ -50,8 +54,8 @@ def load_and_train_pipeline():
     # ADVANCED FEATURE: Calculate PSI
     psi_value = calculate_psi(train_scores, test_scores)
 
-    # Return model.C_[0] to show the optimal hyperparameter in the UI
-    return train_raw, df_train, test_clean, scorecard_df, shadow_insights, woe_engine, psi_value, adv_model.C_[0]
+    # FIX: Return train_clean here, which gets assigned to df_train outside the function
+    return train_raw, train_clean, test_clean, scorecard_df, shadow_insights, woe_engine, psi_value, adv_model.C_[0]
 
 
 def _score_portfolio(X_woe, scorecard_df, woe_engine, woe_cols):
@@ -187,4 +191,4 @@ with tab4:
     sns.barplot(data=fairness_df, x='region', y='Approval_Rate', palette="viridis", ax=ax5)
     ax5.axhline(fairness_df['Approval_Rate'].mean(), color='red', linestyle='--', label='Average')
     ax5.legend(loc='lower right')
-    st.pyplot(fig5) 
+    st.pyplot(fig5)
