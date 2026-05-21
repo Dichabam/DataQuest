@@ -36,7 +36,7 @@ class WoE_Binning:
         self.woe_dicts[feature] = woe_dict
         self.iv_scores[feature] = iv
 
-        df[f'{feature}_woe'] = df[f'{feature}_binned'].map(woe_dict)
+        df[f'{feature}_woe'] = df[f'{feature}_binned'].map(woe_dict).fillna(0)
         return df
 
     def fit_transform_categorical(self, df, feature):
@@ -44,7 +44,7 @@ class WoE_Binning:
         woe_dict, iv = self._calculate_woe_iv(df, feature, self.target_col)
         self.woe_dicts[feature] = woe_dict
         self.iv_scores[feature] = iv
-        df[f'{feature}_woe'] = df[feature].map(woe_dict)
+        df[f'{feature}_woe'] = df[feature].map(woe_dict).fillna(0)
         return df
 
     def transform(self, df, feature, is_continuous=False):

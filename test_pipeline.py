@@ -101,6 +101,10 @@ def test_feature_engineering(train_clean, test_clean):
     for feat in expected_features:
         _assert(feat in woe_engine.iv_scores, f"IV score exists for '{feat}'")
         _assert(woe_engine.iv_scores[feat] >= 0, f"IV for '{feat}' is non-negative")
+    
+    for col in woe_cols:
+        _assert(train_woe[col].isna().sum() == 0, f"No NaNs in {col} (train)")
+        _assert(test_woe[col].isna().sum() == 0,  f"No NaNs in {col} (test)")
 
     return train_woe, test_woe, woe_engine
 
