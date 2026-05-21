@@ -39,14 +39,6 @@ def generate_scorecard(model, woe_engine, feature_names, target_score=600, targe
     Points per bin:
         Points_i = -(beta_i * WoE_ij * Factor) - (alpha / n) * Factor + Offset / n
 
-    FIX: Previously the intercept (alpha) was ignored entirely. The offset was
-    split equally across features as `offset / n_features`, but this only
-    accounts for the score anchor — it does NOT distribute the model intercept.
-    The intercept shifts the log-odds baseline and must be factored in per
-    feature. The corrected formula below distributes the intercept contribution
-    equally across all features, which is the standard industry approach when
-    a base score per feature is required.
-
     Reference: Siddiqi, N. (2006). Credit Risk Scorecards. Wiley.
     """
     factor = pdo / np.log(2)
