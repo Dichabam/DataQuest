@@ -32,7 +32,7 @@ from src.model_training import prepare_baseline_data, prepare_woe_data, train_an
 from src.scorecard import generate_scorecard
 from src.business_logic import calculate_portfolio_profit, audit_fairness, discover_interactions, calculate_psi
 
-@st.cache_resource(show_spinner="Training ML Models (CV Tuning active)...")
+@st.cache_resource(show_spinner="Training Models (CV Tuning active)...")
 def load_and_train_pipeline():
     train, test = load_and_split_data("data/raw/loan_book.csv")
     train_raw = train.copy() 
@@ -121,7 +121,7 @@ with tab1:
                 sns.barplot(data=woe_df, x='Bin', y='WoE', hue='Bin', palette='viridis', legend=False, ax=ax2)
                 plt.xticks(rotation=45, ha='right')
                 plt.tight_layout()
-                st.pyplot(fig2, width=True)
+                st.pyplot(fig2, use_container_width=True)
 
     with eda_sub2:
         col_x, col_y = st.columns(2)
@@ -139,7 +139,7 @@ with tab1:
                 sns.boxplot(data=scatter_data, x=x_feat, y=y_feat, hue='default_flag', palette='coolwarm', ax=ax3)
                 plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
-            st.pyplot(fig3, width=True)
+            st.pyplot(fig3, use_container_width=True)
             
         with col_b2:
             st.write("**Correlation Heatmap**")
@@ -148,7 +148,7 @@ with tab1:
             plt.xticks(rotation=45, ha='right')
             plt.yticks(rotation=0)
             plt.tight_layout()
-            st.pyplot(fig_corr, width=True)
+            st.pyplot(fig_corr, use_container_width=True)
 
     with eda_sub3:
         st.subheader("Shadow Model Feature Importance (Random Forest)")
@@ -157,7 +157,7 @@ with tab1:
         sns.barplot(data=shadow_insights.head(10), x='RF_Importance', y='Feature', hue='Feature', palette='viridis', legend=False, ax=ax_shadow)
         ax_shadow.set_xlabel("Random Forest Importance Score")
         plt.tight_layout()
-        st.pyplot(fig_shadow, width=True)
+        st.pyplot(fig_shadow, use_container_width=True)
 
     with eda_sub4:
         st.subheader("Data Quality Report")
@@ -169,6 +169,7 @@ with tab1:
         }).reset_index().rename(columns={'index': 'Feature'})
         st.dataframe(dq_df.style.background_gradient(cmap='Reds', subset=['Missing %']))
 
+# --- TAB 2: MODEL COMPARISON & PSI ---
 # --- TAB 2: MODEL COMPARISON & PSI ---
 with tab2:
     st.header("Model Evaluation & Stability")
@@ -182,18 +183,29 @@ with tab2:
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         st.subheader("ROC Curve Comparison")
-        st.caption("Beating the 0.68 official baseline and our own 0.70 unengineered baseline.")
+        # FIXED: Updated caption to match the report's baseline
+        st.caption("Advanced model vs 0.766 unengineered baseline.")
         fig4, ax4 = plt.subplots(figsize=(8, 6))
         ax4.plot(fpr_b, tpr_b, label=f'Raw Features GLM (AUC = {auc_b:.3f})', linestyle='--')
         ax4.plot(fpr_a, tpr_a, label=f'Advanced WoE Model (AUC = {auc_a:.3f})', linewidth=2)
         ax4.plot([0, 1], [0, 1], 'k--', label='Random')
         ax4.legend(loc='lower right')
         plt.tight_layout()
-        st.pyplot(fig4, width=True)
+        st.pyplot(fig4, use_container_width=True)
         
     with col_m2:
+        # FIXED: Restored PSI Metrics
+        st.subheader("Population Stability Index (PSI)")
+        st.metric("Portfolio PSI Score", f"{psi_value:.4f}")
+        if psi_value < 0.1:
+            st.success("**Stable:** Distribution matches training data perfectly.")
+        elif psi_value < 0.2:
+            st.warning("**Warning:** Minor shift detected in applicant population.")
+        else:
+            st.error("**Critical Shift:** Major data drift detected. Retraining required.")
+            
         st.subheader("Final Interpretable Scorecard")
-        st.dataframe(scorecard_df, height=350)
+        st.dataframe(scorecard_df, height=250)
 
 # --- TAB 3: BUSINESS VALUE & STRESS TESTING ---
 with tab3:
@@ -233,7 +245,7 @@ with tab3:
         ax_trade.set_xlabel("Probability Threshold")
         ax_trade.legend()
         plt.tight_layout()
-        st.pyplot(fig_trade, width=True)
+        st.pyplot(fig_trade, use_container_width=True)
         
     with col_trade2:
         st.subheader("Business Metrics (Precision vs Recall)")
@@ -259,4 +271,4 @@ with tab4:
     ax5.axhline(fairness_df['Approval_Rate'].mean(), color='red', linestyle='--', label='Average')
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    st.pyplot(fig5, width=True)
+    st.pyplot(fig5, use_container_width=True)
