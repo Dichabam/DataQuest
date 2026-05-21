@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="Strategic Model Dashboard", layout="wide", page_icon="🏦")
+st.set_page_config(page_title="Strategic Model Dashboard", layout="wide", page_icon="⌀")
 
 import pandas as pd
 import numpy as np
@@ -9,8 +9,21 @@ import os, sys
 import warnings
 from sklearn.metrics import roc_curve, auc, precision_score, recall_score, f1_score
 
+
 warnings.filterwarnings('ignore')
-sns.set_theme(style="whitegrid", rc={"figure.facecolor": "white", "axes.facecolor": "white"})
+
+sns.set_theme(
+    style="whitegrid", 
+    rc={
+        "figure.facecolor": "white", 
+        "axes.facecolor": "white",
+        "axes.labelsize": 10,      
+        "xtick.labelsize": 9,      
+        "ytick.labelsize": 9,      
+        "legend.fontsize": 9        
+    }
+)
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.data_prep import load_and_split_data, clean_data
@@ -90,19 +103,25 @@ with tab1:
         
         col_p1, col_p2 = st.columns(2)
         with col_p1:
-            fig, ax = plt.subplots(figsize=(6, 4))
+  
+            fig, ax = plt.subplots(figsize=(8, 5))
             sns.histplot(data=plot_data, x=feature, hue='default_flag', multiple='stack', palette='coolwarm', ax=ax)
-            st.pyplot(fig)
+            if not pd.api.types.is_numeric_dtype(df_train[feature]):
+                plt.xticks(rotation=45, ha='right')
+            plt.tight_layout() 
+            st.pyplot(fig, use_container_width=True) 
+            
         with col_p2:
             if feature in woe_engine.woe_dicts:
                 iv_val = woe_engine.iv_scores.get(feature, 0)
                 st.write(f"**Weight of Evidence (WoE)** | IV: {iv_val:.3f}")
                 woe_df = pd.DataFrame(list(woe_engine.woe_dicts[feature].items()), columns=['Bin', 'WoE'])
-                fig2, ax2 = plt.subplots(figsize=(6, 4))
-                # Fixed Seaborn palette warning by adding hue and legend=False
+
+                fig2, ax2 = plt.subplots(figsize=(8, 5))
                 sns.barplot(data=woe_df, x='Bin', y='WoE', hue='Bin', palette='viridis', legend=False, ax=ax2)
                 plt.xticks(rotation=45, ha='right')
-                st.pyplot(fig2)
+                plt.tight_layout()
+                st.pyplot(fig2, width=True)
 
     with eda_sub2:
         col_x, col_y = st.columns(2)
@@ -112,28 +131,33 @@ with tab1:
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             st.write("**Interaction Scatter Plot**")
-            fig3, ax3 = plt.subplots(figsize=(6, 4))
+            fig3, ax3 = plt.subplots(figsize=(8, 5))
             scatter_data = df_train.sample(n=min(1000, len(df_train)), random_state=42)
             if pd.api.types.is_numeric_dtype(df_train[x_feat]) and pd.api.types.is_numeric_dtype(df_train[y_feat]):
                 sns.scatterplot(data=scatter_data, x=x_feat, y=y_feat, hue='default_flag', alpha=0.6, palette='coolwarm', ax=ax3)
             else:
                 sns.boxplot(data=scatter_data, x=x_feat, y=y_feat, hue='default_flag', palette='coolwarm', ax=ax3)
-            st.pyplot(fig3)
+                plt.xticks(rotation=45, ha='right')
+            plt.tight_layout()
+            st.pyplot(fig3, width=True)
             
         with col_b2:
             st.write("**Correlation Heatmap**")
-            fig_corr, ax_corr = plt.subplots(figsize=(6, 4))
-            sns.heatmap(df_train.select_dtypes(include=np.number).corr(), annot=False, cmap='coolwarm', ax=ax_corr)
-            st.pyplot(fig_corr)
+            fig_corr, ax_corr = plt.subplots(figsize=(8, 5))
+            sns.heatmap(df_train.select_dtypes(include=np.number).corr(), annot=True, fmt=".2f", cmap='coolwarm', ax=ax_corr, annot_kws={"size": 8})
+            plt.xticks(rotation=45, ha='right')
+            plt.yticks(rotation=0)
+            plt.tight_layout()
+            st.pyplot(fig_corr, width=True)
 
     with eda_sub3:
         st.subheader("Shadow Model Feature Importance (Random Forest)")
         st.write("A non-linear model was used strictly for discovery to locate hidden signal patterns without violating the linear regulatory constraint.")
-        fig_shadow, ax_shadow = plt.subplots(figsize=(10, 5))
-        # Fixed Seaborn palette warning by adding hue and legend=False
+        fig_shadow, ax_shadow = plt.subplots(figsize=(10, 6))
         sns.barplot(data=shadow_insights.head(10), x='RF_Importance', y='Feature', hue='Feature', palette='viridis', legend=False, ax=ax_shadow)
         ax_shadow.set_xlabel("Random Forest Importance Score")
-        st.pyplot(fig_shadow)
+        plt.tight_layout()
+        st.pyplot(fig_shadow, width=True)
 
     with eda_sub4:
         st.subheader("Data Quality Report")
@@ -159,16 +183,17 @@ with tab2:
     with col_m1:
         st.subheader("ROC Curve Comparison")
         st.caption("Beating the 0.68 official baseline and our own 0.70 unengineered baseline.")
-        fig4, ax4 = plt.subplots(figsize=(6, 5))
+        fig4, ax4 = plt.subplots(figsize=(8, 6))
         ax4.plot(fpr_b, tpr_b, label=f'Raw Features GLM (AUC = {auc_b:.3f})', linestyle='--')
         ax4.plot(fpr_a, tpr_a, label=f'Advanced WoE Model (AUC = {auc_a:.3f})', linewidth=2)
         ax4.plot([0, 1], [0, 1], 'k--', label='Random')
         ax4.legend(loc='lower right')
-        st.pyplot(fig4)
+        plt.tight_layout()
+        st.pyplot(fig4, width=True)
         
     with col_m2:
         st.subheader("Final Interpretable Scorecard")
-        st.dataframe(scorecard_df, height=300)
+        st.dataframe(scorecard_df, height=350)
 
 # --- TAB 3: BUSINESS VALUE & STRESS TESTING ---
 with tab3:
@@ -202,12 +227,13 @@ with tab3:
             vols.append(app.mean() * 100)
             risks.append(df_test.loc[app, 'actual_default'].mean() * 100 if app.sum() > 0 else 0)
             
-        fig_trade, ax_trade = plt.subplots(figsize=(6, 4))
+        fig_trade, ax_trade = plt.subplots(figsize=(8, 5))
         ax_trade.plot(thresholds, vols, label="Approval Volume (%)", color='blue')
         ax_trade.plot(thresholds, risks, label="Portfolio Risk (Default %)", color='red')
         ax_trade.set_xlabel("Probability Threshold")
         ax_trade.legend()
-        st.pyplot(fig_trade)
+        plt.tight_layout()
+        st.pyplot(fig_trade, width=True)
         
     with col_trade2:
         st.subheader("Business Metrics (Precision vs Recall)")
@@ -228,9 +254,9 @@ with tab4:
     cutoff_score = st.slider("Credit Score Approval Cutoff", int(df_test['credit_score'].min()), int(df_test['credit_score'].max()), 600, 5)
     fairness_df = audit_fairness(df_test, 'region', 'credit_score', cutoff_score)
 
-    fig5, ax5 = plt.subplots(figsize=(10, 4))
-    # Fixed Seaborn palette warning by adding hue and legend=False
+    fig5, ax5 = plt.subplots(figsize=(10, 5))
     sns.barplot(data=fairness_df, x='region', y='Approval_Rate', hue='region', palette="viridis", legend=False, ax=ax5)
     ax5.axhline(fairness_df['Approval_Rate'].mean(), color='red', linestyle='--', label='Average')
-    ax5.legend(loc='lower right')
-    st.pyplot(fig5)
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    st.pyplot(fig5, width=True)
