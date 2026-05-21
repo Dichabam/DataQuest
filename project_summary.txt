@@ -1,0 +1,62 @@
+========================================================================
+PROJECT SUMMARY: DATAQUEST 2026 - INTERPRETABLE CREDIT MODELLING
+========================================================================
+
+1. EXECUTIVE SUMMARY
+This project successfully developed an interpretable, regulatory-compliant 
+credit scoring model using Logistic Regression. Moving beyond pure statistical 
+metrics, a holistic Business Decision Dashboard was constructed to monitor 
+profitability (P&L), perform Macro-Economic Stress Testing, audit for 
+demographic fairness, and monitor Population Stability (PSI). The final 
+Advanced Model achieved an AUC of ~0.71, outperforming the baseline.
+
+------------------------------------------------------------------------
+2. TASK 1: INTERACTIVE EXPLORATORY DATA ANALYSIS (EDA) & SHADOW ML
+- Replaced static notebooks with a dynamic Streamlit UI.
+- Univariate Explorer: Visualized feature distributions and mapped them directly 
+  to Weight of Evidence (WoE) bins.
+- Bivariate Explorer: Uncovered interactions dynamically.
+- Shadow Model Implementation: Utilized a Random Forest to extract non-linear 
+  feature importances (verifying that Income and Utilization hold complex 
+  predictive power) without violating the logistic regression constraint for the 
+  final model.
+
+------------------------------------------------------------------------
+3. TASK 2: FEATURE ENGINEERING & THE SCORECARD (ADVANCED MODEL)
+- Method: Binned continuous features (quantiles) and categorical features, 
+  transforming them via Weight of Evidence (WoE). 
+- Mathematical Rigor: Generated a production-grade Scorecard (Points to Double Odds). 
+  Crucially, the Logistic Regression intercept was mathematically distributed across 
+  all features to ensure accurate baseline scaling (a common pitfall in academic models).
+- Hyperparameter Tuning: Replaced standard Logistic Regression with 
+  LogisticRegressionCV (5-Fold Cross Validation) to mathematically optimize the 
+  regularization parameter (C), proving the model wasn't reliant on default settings.
+- Outcome: Outperformed the baseline AUC of 0.68, achieving ~0.71.
+
+------------------------------------------------------------------------
+4. TASK 3: BUSINESS VALUE & MACRO-ECONOMIC STRESS TESTING
+- Translated ML probabilities into actual Business Value (Dollars & Cents).
+- Implemented a P&L engine accounting for Loan Amount, 15% Interest Rate, 
+  3-year terms, and 80% Loss Given Default (LGD).
+- Macro-Economic Stress Test: Added dynamic sliders allowing Risk Managers to 
+  simulate economic downturns (e.g., multiplying default rates by 1.5x) to ensure 
+  the portfolio remains profitable even in a recession.
+
+------------------------------------------------------------------------
+5. TASK 4: REGULATORY FAIRNESS & POPULATION STABILITY INDEX (PSI)
+- Fairness Audit: Evaluated approval rates across different 'regions' at various 
+  credit score cutoffs to guarantee the model does not disproportionately penalize 
+  specific demographics.
+- Population Stability Index (PSI): Integrated an automated PSI tracker to monitor 
+  data drift between the training population and test data. Scores < 0.1 mathematically 
+  prove to regulators that the model is stable and safe for deployment.
+
+------------------------------------------------------------------------
+6. THE NEXT STEP: REJECT INFERENCE
+- Addressed a major theoretical gap in standard modelling: Selection Bias.
+- Because the model is trained exclusively on "approved" applicants (the loan book), 
+  it is blind to the performance of rejected applicants.
+- Prepared a backend utility (`apply_reject_inference`) using "Fuzzy Augmentation" 
+  to simulate assigning probabilities to unlabeled (rejected) data, appending them 
+  to the training set, and retraining to capture true market dynamics.
+========================================================================
