@@ -30,11 +30,7 @@ class WoE_Binning:
     def fit_transform_continuous(self, df, feature, q=5):
         """
         Bins a continuous feature into quantiles and calculates WoE.
-
-        FIX: Previously mutated the input dataframe in place AND returned it,
-        creating a footgun where callers might not realise the original was
-        modified. Now works on an explicit copy internally and the caller's
-        df is updated via the return value only (consistent with pandas style).
+        
         """
         df = df.copy()
 

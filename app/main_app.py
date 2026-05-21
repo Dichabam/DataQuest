@@ -1,7 +1,7 @@
-# app/main_app.py
+
 import streamlit as st
 
-# Must be the first Streamlit command
+
 st.set_page_config(page_title="Strategic Model Dashboard", layout="wide", page_icon="🏦")
 
 import pandas as pd
@@ -11,7 +11,6 @@ import seaborn as sns
 import os, sys
 from sklearn.metrics import roc_curve, auc, precision_score, recall_score
 
-# Force white background so charts are visible in Streamlit Dark Mode
 sns.set_theme(style="whitegrid", rc={"figure.facecolor": "white", "axes.facecolor": "white"})
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -35,7 +34,7 @@ def load_and_train_pipeline():
     train_woe, test_woe, woe_engine = engineer_features(train_clean, test_clean)
     X_train_woe, y_train_woe, X_test_woe, y_test_woe = prepare_woe_data(train_woe, test_woe)
 
-    # ADVANCED FEATURE: Hyperparameter Tuning via Cross Validation
+    # ADV FEAT: Hyperparameter Tuning via Cross Validation
     adv_model, adv_probs = train_and_evaluate(X_train_woe, y_train_woe, X_test_woe, y_test_woe, "Advanced Model", use_cv=True)
     scorecard_df = generate_scorecard(adv_model, woe_engine, X_train_woe.columns)
 
@@ -51,10 +50,9 @@ def load_and_train_pipeline():
     test_clean['credit_score'] = test_scores
     test_clean['actual_default'] = y_test_woe.values
 
-    # ADVANCED FEATURE: Calculate PSI
+    # ADV FEAT: Calculate PSI
     psi_value = calculate_psi(train_scores, test_scores)
 
-    # FIX: Return train_clean here, which gets assigned to df_train outside the function
     return train_raw, train_clean, test_clean, scorecard_df, shadow_insights, woe_engine, psi_value, adv_model.C_[0]
 
 
@@ -77,13 +75,13 @@ def _score_portfolio(X_woe, scorecard_df, woe_engine, woe_cols):
 # Load data
 train_raw, df_train, df_test, scorecard_df, shadow_insights, woe_engine, psi_value, optimal_c = load_and_train_pipeline()
 
-st.title("🏦 Retail Lending: Strategic Model Dashboard")
+st.title("Retail Lending: Strategic Model Dashboard")
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 1. Interactive EDA", 
-    "📈 2. Model Comparison & PSI", 
-    "💼 3. P&L & Stress Testing", 
-    "⚖️ 4. Fairness Audit"
+    "1. Interactive EDA", 
+    "2. Model Comparison & PSI", 
+    "3. P&L & Stress Testing", 
+    "4. Fairness Audit"
 ])
 
 # --- TAB 1: INTERACTIVE EDA ---
@@ -150,11 +148,11 @@ with tab2:
         st.subheader("Population Stability Index (PSI)")
         st.metric("Portfolio PSI Score", f"{psi_value:.4f}")
         if psi_value < 0.1:
-            st.success("✅ **Stable:** The distribution of test scores matches training data perfectly.")
+            st.success("**Stable:** The distribution of test scores matches training data perfectly.")
         elif psi_value < 0.2:
-            st.warning("⚠️ **Warning:** Minor shift detected in applicant population.")
+            st.warning("**Warning:** Minor shift detected in applicant population.")
         else:
-            st.error("🚨 **Critical Shift:** Major data drift detected. Retraining required.")
+            st.error("**Critical Shift:** Major data drift detected. Retraining required.")
         st.dataframe(scorecard_df, height=300)
 
 # --- TAB 3: BUSINESS VALUE & STRESS TESTING ---

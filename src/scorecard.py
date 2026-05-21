@@ -69,7 +69,7 @@ def generate_scorecard(model, woe_engine, feature_names, target_score=600, targe
         for bin_name, woe_value in woe_dict.items():
             # Full formula:
             #   Points = -(beta * WoE * Factor)          <- variable part
-            #            - (intercept/n * Factor)         <- intercept share (FIX)
+            #            - (intercept/n * Factor)         <- intercept share 
             #            + (Offset / n)                   <- score anchor
             points = (
                 -(beta * woe_value * factor)
