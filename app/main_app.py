@@ -84,7 +84,7 @@ def _score_portfolio(X_woe, scorecard_df, woe_engine, woe_cols):
 
 train_raw, df_train, df_test, scorecard_df, shadow_insights, woe_engine, psi_value, optimal_c = load_and_train_pipeline()
 
-st.title("🏦 Retail Lending: Strategic Model Dashboard")
+st.title("Retail Lending: Strategic Model Dashboard")
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "1. Interactive EDA", 
