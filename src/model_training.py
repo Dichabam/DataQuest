@@ -15,7 +15,7 @@ def prepare_baseline_data(train_df, test_df, target_col='default_flag'):
     X_test_raw  = test_df[raw_features].copy()
     
     for col in raw_features:
-        if X_train_raw[col].dtype in ['float64', 'int64']:
+        if pd.api.types.is_numeric_dtype(X_train_raw[col]):
             median_val = X_train_raw[col].median()
             X_train_raw[col] = X_train_raw[col].fillna(median_val)
             X_test_raw[col]  = X_test_raw[col].fillna(median_val)
