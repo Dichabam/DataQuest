@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
 def discover_interactions(X_train_woe, y_train):
-    rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+    rf = RandomForestClassifier(n_estimators=20, max_depth=4, n_jobs=-1, random_state=42)
     rf.fit(X_train_woe, y_train)
     return pd.DataFrame({
         'Feature': X_train_woe.columns,
@@ -32,7 +32,7 @@ def calculate_portfolio_profit(y_true, y_prob, cutoff_prob, loan_amounts, macro_
     good_loans = approved_loans[approved_loans['actual_default'] == 0]
     revenue = good_loans['loan_amount'].sum() * interest_rate * loan_term_years
 
-    # Losses from defaulted loans (Scaled by the Macro Stress Multiplier)
+    # Losses from defaulted loans 
     bad_loans = approved_loans[approved_loans['actual_default'] == 1]
     base_losses = bad_loans['loan_amount'].sum() * loss_given_default
     

@@ -32,7 +32,7 @@ from src.model_training import prepare_baseline_data, prepare_woe_data, train_an
 from src.scorecard import generate_scorecard
 from src.business_logic import calculate_portfolio_profit, audit_fairness, discover_interactions, calculate_psi
 
-@st.cache_resource(show_spinner="Training Models (CV Tuning active)...")
+@st.cache_resource(show_spinner="Training Models...")
 def load_and_train_pipeline():
     train, test = load_and_split_data("data/raw/loan_book.csv")
     train_raw = train.copy() 
@@ -68,16 +68,18 @@ def _score_portfolio(X_woe, scorecard_df, woe_engine, woe_cols):
     scores = np.zeros(len(X_woe))
     for feature_col in woe_cols:
         original_feature = feature_col.replace('_woe', '')
-        feature_rows = scorecard_df[scorecard_df['Feature'] == original_feature].copy()
-        if feature_rows.empty: continue
-        
-        woe_values = feature_rows['WoE'].values
+        feature_rows = scorecard_df[scorecard_df['Feature'] == original_feature]
+        if feature_rows.empty:
+            continue
+        woe_values    = feature_rows['WoE'].values
         points_values = feature_rows['Points'].values
         applicant_woes = X_woe[feature_col].values
-        
-        for i, aw in enumerate(applicant_woes):
-            idx = np.argmin(np.abs(woe_values - aw))
-            scores[i] += points_values[idx]
+
+        # vectorized — no inner Python loop
+        diffs = np.abs(applicant_woes[:, None] - woe_values[None, :])
+        idxs  = np.argmin(diffs, axis=1)
+        scores += points_values[idxs]
+
     return scores.astype(int)
 
 train_raw, df_train, df_test, scorecard_df, shadow_insights, woe_engine, psi_value, optimal_c = load_and_train_pipeline()

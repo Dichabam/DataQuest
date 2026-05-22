@@ -63,7 +63,11 @@ def clean_data(df, is_train=True, imputers=None):
         imputers['income_cap'],
         cleaned_df['annual_income'],
     )
-
+    for col in ['age', 'dti_ratio', 'loan_amount', 'credit_utilisation_pct']:
+        if col in cleaned_df.columns:
+            if is_train:
+                imputers[f'{col}_median'] = cleaned_df[col].median()
+            cleaned_df[col] = cleaned_df[col].fillna(imputers[f'{col}_median'])
     # 3. String formatting — standardise RENT/rent etc.
     cleaned_df['home_ownership'] = cleaned_df['home_ownership'].str.upper()
 
@@ -75,3 +79,4 @@ if __name__ == "__main__":
     train_clean, imputers = clean_data(train, is_train=True)
     test_clean, _ = clean_data(test, is_train=False, imputers=imputers)
     print(f"Train shape: {train_clean.shape}, Test shape: {test_clean.shape}")
+    

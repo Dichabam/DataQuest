@@ -36,6 +36,8 @@ def prepare_baseline_data(train_df, test_df, target_col='default_flag'):
 
 def prepare_woe_data(train_df, test_df, target_col='default_flag'):
     woe_features = [col for col in train_df.columns if col.endswith('_woe')]
+    X_train = train_df[woe_features].fillna(0)   
+    X_test  = test_df[woe_features].fillna(0)
     return train_df[woe_features], train_df[target_col], test_df[woe_features], test_df[target_col]
 
 def train_and_evaluate(X_train, y_train, X_test, y_test, model_name="Model", use_cv=False):
